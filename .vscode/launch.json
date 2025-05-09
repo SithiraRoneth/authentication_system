@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run back2/main.go",
+            "type": "go",
+            "request": "launch",
+            "program": "${workspaceFolder}/back2/main.go"
+        },
+        {
+            "name": "Run backend/cmd/main.go",
+            "type": "go",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/cmd/main.go"
+        }
+    ]
+}
