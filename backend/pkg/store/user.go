@@ -2,12 +2,17 @@ package store
 
 import (
 	"database/sql"
-	"fmt"
 
 	_ "github.com/go-sql-driver/mysql"
 )
 
 var DB *sql.DB
+
+type User struct {
+	ID           int
+	Username     string
+	PasswordHash string
+}
 
 func InitDB(dataSourceName string) error {
 	var err error
@@ -18,32 +23,17 @@ func InitDB(dataSourceName string) error {
 	return DB.Ping()
 }
 
-type User struct {
-	ID           int
-	Username     string
-	PasswordHash string
-}
-
 func SaveUser(user User) error {
-	query := "INSERT INTO users (username, password_hash) VALUES (?, ?)"
-	_, err := DB.Exec(query, user.Username, user.PasswordHash)
-	if err != nil {
-		return fmt.Errorf("could not insert user: %v", err)
-	}
-	return nil
+	_, err := DB.Exec("INSERT INTO users (username, password_hash) VALUES (?, ?)", user.Username, user.PasswordHash)
+	return err
 }
 
 func GetUserByUsername(username string) (*User, error) {
-	query := "SELECT id, username, password_hash FROM users WHERE username = ?"
-	row := DB.QueryRow(query, username)
-
+	row := DB.QueryRow("SELECT id, username, password_hash FROM users WHERE username = ?", username)
 	var user User
 	err := row.Scan(&user.ID, &user.Username, &user.PasswordHash)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
+	if err == sql.ErrNoRows {
+		return nil, nil
 	}
-	return &user, nil
+	return &user, err
 }
