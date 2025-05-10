@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
 type AuthContextType = {
@@ -16,9 +17,24 @@ type AuthContextType = {
       setUser({ email });
     };
   
-    const register = (email: string, password: string) => {
+    const register = async (email: string, password: string) => {
+  try {
+    const res = await axios.post("http://localhost:8080/api/user/", {
+      email,
+      password,
+    });
+
+    // Optional: adjust this if backend returns different data
+    if (res.status === 200 || res.status === 201) {
       setUser({ email });
-    };
+    } else {
+      alert("Registration failed");
+    }
+  } catch (error: any) {
+    console.error("Registration error:", error);
+    alert(error.response?.data?.message || "Registration failed");
+  }
+};
   
     const logout = () => setUser(null);
   
