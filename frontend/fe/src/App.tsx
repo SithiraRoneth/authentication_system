@@ -13,13 +13,18 @@ const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   return user ? children : <Navigate to="/login" />;
 };
 
+const PublicRoute = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  return user ? <Navigate to="/dashboard" /> : children;
+};
+
 function App() {
   return (
     <div className="min-h-screen bg-gray-100">
       <Header />
       <Routes>
-        <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/login" />} />
@@ -29,4 +34,3 @@ function App() {
 }
 
 export default App;
-
