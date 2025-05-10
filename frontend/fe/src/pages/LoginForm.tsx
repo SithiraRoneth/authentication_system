@@ -8,12 +8,18 @@ export default function Login() {
     const { login } = useAuth();
     const navigate = useNavigate();
   
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!email || !password) return alert("All fields required");
-      login(email, password);
-      navigate('/dashboard');
-    };
+    const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) return alert("All fields required");
+
+    try {
+      await login(email, password);
+      navigate("/dashboard");
+    } catch (err) {
+      alert("Login failed");
+    }
+  };
+
   
     return (
       <form onSubmit={handleSubmit} className="max-w-md mx-auto mt-10 bg-white p-6 rounded shadow">
