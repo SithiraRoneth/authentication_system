@@ -3,8 +3,15 @@ package handler
 import (
 	"backend/internal/auth"
 	"backend/pkg/store"
+	"encoding/json"
+	"fmt"
 	"net/http"
 )
+
+type RegisterRequest struct {
+	Username string `json:"email"`    // maps frontend "email" to backend "Username"
+	Password string `json:"password"` // maps directly
+}
 
 func SaveUserHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -12,27 +19,25 @@ func SaveUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Failed to parse form data", http.StatusBadRequest)
+	var req RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON data", http.StatusBadRequest)
 		return
 	}
 
-	username := r.FormValue("username")
-	password := r.FormValue("password")
-
-	if username == "" || password == "" {
+	if req.Username == "" || req.Password == "" {
 		http.Error(w, "Username and password are required", http.StatusBadRequest)
 		return
 	}
 
-	hash, err := auth.HashPassword(password)
+	hash, err := auth.HashPassword(req.Password)
 	if err != nil {
 		http.Error(w, "Error hashing password", http.StatusInternalServerError)
 		return
 	}
 
 	user := store.User{
-		Username:     username,
+		Username:     req.Username,
 		PasswordHash: hash,
 	}
 
@@ -43,6 +48,7 @@ func SaveUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("User saved successfully"))
+	fmt.Fprintf(w, "User %s saved successfully", req.Username)
 }
 
 func GetUserHandler(w http.ResponseWriter, r *http.Request) {
