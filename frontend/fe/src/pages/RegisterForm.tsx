@@ -11,6 +11,7 @@ export default function Register() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!email || !password || !confirmPassword) {
       return alert("All fields are required");
     }
@@ -20,8 +21,11 @@ export default function Register() {
     }
 
     try {
+      // Try to register the user
       await register(email, password);
       alert("Registration successful");
+
+      // Navigate to the login page
       navigate('/login');
     } catch (err) {
       console.error("Failed to register", err);
