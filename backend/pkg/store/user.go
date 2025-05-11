@@ -37,3 +37,14 @@ func GetUserByUsername(username string) (*User, error) {
 	}
 	return &user, err
 }
+
+// GetUserByID retrieves a user by their ID
+func GetUserByID(id int) (*User, error) {
+	row := DB.QueryRow("SELECT id, username, password_hash FROM users WHERE id = ?", id)
+	var user User
+	err := row.Scan(&user.ID, &user.Username, &user.PasswordHash)
+	if err == sql.ErrNoRows {
+		return nil, nil // Return nil if no user found
+	}
+	return &user, err // Return user and any error that occurred
+}
