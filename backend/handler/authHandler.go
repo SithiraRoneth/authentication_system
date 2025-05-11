@@ -5,6 +5,7 @@ import (
 	"backend/pkg/store"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -73,6 +74,7 @@ func AuthenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Optionally set refresh token as cookie (not implemented fully here)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    "placeholder",
@@ -81,5 +83,39 @@ func AuthenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Now().Add(7 * 24 * time.Hour),
 	})
 
-	json.NewEncoder(w).Encode(map[string]string{"token": token})
+	json.NewEncoder(w).Encode(map[string]string{
+		"token": token,
+		"email": user.Username,
+	})
+}
+
+func GetCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		http.Error(w, "Missing or invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+	claims, err := auth.ParseJWT(tokenStr)
+	if err != nil {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	username, ok := claims["username"].(string)
+	if !ok {
+		http.Error(w, "Invalid token payload", http.StatusUnauthorized)
+		return
+	}
+
+	user, err := store.GetUserByUsername(username)
+	if err != nil || user == nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"email": user.Username,
+	})
 }
