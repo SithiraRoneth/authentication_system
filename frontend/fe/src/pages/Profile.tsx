@@ -5,9 +5,9 @@ export default function Profile() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    await logout(); // Calls logout from context
+    navigate('/login'); // Redirects to login page after logout
   };
 
   return (
