@@ -14,6 +14,7 @@ type RegisterRequest struct {
 	Password string `json:"password"`
 }
 
+// SaveUserHandler handles the user registration
 func SaveUserHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -47,6 +48,7 @@ func SaveUserHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "User created"})
 }
 
+// AuthenticateUserHandler handles user login
 func AuthenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -68,27 +70,91 @@ func AuthenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := auth.GenerateJWT(user.ID, user.Username)
+	accessToken, err := auth.GenerateAccessToken(user.ID, user.Username)
 	if err != nil {
-		http.Error(w, "Token error", http.StatusInternalServerError)
+		http.Error(w, "Token generation failed", http.StatusInternalServerError)
 		return
 	}
 
-	// Optionally set refresh token as cookie (not implemented fully here)
+	refreshToken, err := auth.GenerateRefreshToken(user.ID)
+	if err != nil {
+		http.Error(w, "Refresh token generation failed", http.StatusInternalServerError)
+		return
+	}
+
+	// Set the refresh token in the cookie (secure cookie)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
-		Value:    "placeholder",
+		Value:    refreshToken,
 		Path:     "/",
 		HttpOnly: true,
 		Expires:  time.Now().Add(7 * 24 * time.Hour),
 	})
 
+	// Respond with the access token
 	json.NewEncoder(w).Encode(map[string]string{
-		"token": token,
+		"token": accessToken,
 		"email": user.Username,
 	})
 }
 
+// RefreshTokenHandler handles refreshing the access token using the refresh token
+func RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("refresh_token")
+	if err != nil {
+		http.Error(w, "Refresh token not found", http.StatusUnauthorized)
+		return
+	}
+
+	// Parse the refresh token
+	claims, err := auth.ParseRefreshToken(cookie.Value)
+	if err != nil {
+		http.Error(w, "Invalid refresh token", http.StatusUnauthorized)
+		return
+	}
+
+	userID, ok := claims["user_id"].(float64) // user_id is stored as float64
+	if !ok {
+		http.Error(w, "Invalid token payload", http.StatusUnauthorized)
+		return
+	}
+
+	user, err := store.GetUserByID(int(userID))
+	if err != nil || user == nil {
+		http.Error(w, "User not found", http.StatusUnauthorized)
+		return
+	}
+
+	// Generate a new access token
+	accessToken, err := auth.GenerateAccessToken(user.ID, user.Username)
+	if err != nil {
+		http.Error(w, "Failed to generate new access token", http.StatusInternalServerError)
+		return
+	}
+
+	// Return the new access token
+	json.NewEncoder(w).Encode(map[string]string{
+		"token": accessToken,
+	})
+}
+
+// LogoutHandler handles user logout
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	// Expire the refresh token cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Expires:  time.Now().Add(-1 * time.Hour),
+	})
+
+	// Respond with a success message
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Logged out successfully"})
+}
+
+// GetCurrentUserHandler retrieves current user info using the access token
 func GetCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
@@ -115,6 +181,7 @@ func GetCurrentUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Respond with the current user info
 	json.NewEncoder(w).Encode(map[string]string{
 		"email": user.Username,
 	})
