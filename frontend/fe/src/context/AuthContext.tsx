@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 
 type AuthContextType = {
   user: { email: string } | null;
@@ -17,8 +11,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<{ email: string } | null>(null);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
 
-  // ✅ Token check every time app starts or reloads
+  useEffect(() => {
+    verifyToken();
+  }, []);
+
   const verifyToken = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -28,23 +26,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const res = await fetch("http://localhost:8080/api/user/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error("Unauthorized");
-      const data = await res.json();
-      setUser({ email: data.email });
+
+      if (res.ok) {
+        const data = await res.json();
+        setUser({ email: data.email });
+      } else if (res.status === 401) {
+        // Attempt to refresh token
+        const refreshRes = await fetch("http://localhost:8080/api/user/refresh", {
+          method: "POST",
+          credentials: "include", // send refresh_token cookie
+        });
+
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          localStorage.setItem("token", data.token);
+          return verifyToken(); // retry original check
+        }
+
+        throw new Error("Refresh failed");
+      } else {
+        throw new Error("Unauthorized");
+      }
     } catch (err) {
-      console.warn("Invalid token, logging out");
+      console.warn("Invalid or expired token");
       localStorage.removeItem("token");
       setUser(null);
     }
   };
-
-  useEffect(() => {
-    verifyToken();
-  }, []);
 
   const login = async (email: string, password: string) => {
     const res = await fetch("http://localhost:8080/api/user/login", {
@@ -56,25 +66,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const data = await res.json();
     localStorage.setItem("token", data.token);
+    setToken(data.token);
     setUser({ email });
   };
 
   const register = async (email: string, password: string) => {
-  const res = await fetch("http://localhost:8080/api/user/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!res.ok) throw new Error("Registration failed");
+    const res = await fetch("http://localhost:8080/api/user/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) throw new Error("Registration failed");
 
-  // Do not set the user here
-  // Instead, inform the user that registration was successful and navigate to the login page
-  alert("Registration successful");
-};
+    alert("Registration successful");
+  };
 
+  const logout = async () => {
+    const confirmLogout = window.confirm("Are you sure you want to log out?");
+    if (!confirmLogout) return;
 
-  const logout = () => {
+    try {
+      await fetch("http://localhost:8080/api/user/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+
     localStorage.removeItem("token");
+    setToken(null);
     setUser(null);
   };
 
