@@ -9,7 +9,6 @@ import (
 
 func addCORS(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Allow all origins or specify your frontend URL
 		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
@@ -32,6 +31,9 @@ func main() {
 	http.HandleFunc("/api/user/", addCORS(handler.SaveUserHandler))
 	http.HandleFunc("/api/user/login", addCORS(handler.AuthenticateUserHandler))
 	http.HandleFunc("/api/user/me", addCORS(handler.GetCurrentUserHandler))
+	http.HandleFunc("/api/user/refresh", addCORS(handler.RefreshTokenHandler))
+	http.HandleFunc("/api/user/logout", addCORS(handler.LogoutHandler))
+
 	log.Println("Server running on :8080")
 	http.ListenAndServe(":8080", nil)
 }
