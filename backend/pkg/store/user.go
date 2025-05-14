@@ -15,9 +15,9 @@ type User struct {
 	PasswordHash string
 }
 
-func InitDB(dataSourceName string) error {
+func InitDB(dsn string) error {
 	var err error
-	DB, err = sql.Open("mysql", dataSourceName)
+	DB, err = sql.Open("mysql", dsn)
 	if err != nil {
 		log.Printf("Error opening the database: %v", err)
 		return err
