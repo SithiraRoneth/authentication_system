@@ -3,6 +3,7 @@ package main
 import (
 	"backend/handler"
 	"backend/pkg/store"
+	"fmt"
 	"log"
 	"net/http"
 )
@@ -15,6 +16,7 @@ func addCORS(h http.HandlerFunc) http.HandlerFunc {
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
 			return
 		}
 
@@ -23,11 +25,22 @@ func addCORS(h http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
-	err := store.InitDB("root:@tcp(127.0.0.1:3306)/user_authentication")
+	dbUser := "root"
+	dbPass := "1234"
+	dbHost := "127.0.0.1"
+	dbPort := "3306"
+	dbName := "user_authentication"
+
+	// Create the Data Source Name (DSN) string
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", dbUser, dbPass, dbHost, dbPort, dbName)
+
+	// Initialize the database connection
+	err := store.InitDB(dsn)
 	if err != nil {
 		log.Fatalf("DB error: %v", err)
 	}
 
+	// Set up the routes with CORS handling
 	http.HandleFunc("/api/user/", addCORS(handler.SaveUserHandler))
 	http.HandleFunc("/api/user/login", addCORS(handler.AuthenticateUserHandler))
 	http.HandleFunc("/api/user/me", addCORS(handler.GetCurrentUserHandler))
@@ -35,5 +48,7 @@ func main() {
 	http.HandleFunc("/api/user/logout", addCORS(handler.LogoutHandler))
 
 	log.Println("Server running on :8080")
-	http.ListenAndServe(":8080", nil)
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatalf("Server failed: %v", err)
+	}
 }
