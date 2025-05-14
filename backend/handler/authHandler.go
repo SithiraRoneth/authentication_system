@@ -98,7 +98,6 @@ func AuthenticateUserHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// RefreshTokenHandler handles refreshing the access token using the refresh token
 func RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("refresh_token")
 	if err != nil {
@@ -106,14 +105,13 @@ func RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse the refresh token
 	claims, err := auth.ParseRefreshToken(cookie.Value)
 	if err != nil {
 		http.Error(w, "Invalid refresh token", http.StatusUnauthorized)
 		return
 	}
 
-	userID, ok := claims["user_id"].(float64) // user_id is stored as float64
+	userID, ok := claims["user_id"].(float64)
 	if !ok {
 		http.Error(w, "Invalid token payload", http.StatusUnauthorized)
 		return
@@ -125,14 +123,12 @@ func RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate a new access token
 	accessToken, err := auth.GenerateAccessToken(user.ID, user.Username)
 	if err != nil {
 		http.Error(w, "Failed to generate new access token", http.StatusInternalServerError)
 		return
 	}
 
-	// Return the new access token
 	json.NewEncoder(w).Encode(map[string]string{
 		"token": accessToken,
 	})
