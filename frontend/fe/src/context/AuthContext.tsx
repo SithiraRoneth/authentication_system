@@ -33,16 +33,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const data = await res.json();
         setUser({ email: data.email });
       } else if (res.status === 401) {
-        // Attempt to refresh token
         const refreshRes = await fetch("http://localhost:8080/api/user/refresh", {
           method: "POST",
-          credentials: "include", // send refresh_token cookie
+          credentials: "include",
         });
 
         if (refreshRes.ok) {
           const data = await refreshRes.json();
           localStorage.setItem("token", data.token);
-          return verifyToken(); // retry original check
+          return verifyToken();
         }
 
         throw new Error("Refresh failed");
