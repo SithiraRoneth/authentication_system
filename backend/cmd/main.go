@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 )
 
 func addCORS(h http.HandlerFunc) http.HandlerFunc {
@@ -27,17 +28,23 @@ func addCORS(h http.HandlerFunc) http.HandlerFunc {
 func main() {
 	dbUser := "root"
 	dbPass := "1234"
-	dbHost := "127.0.0.1"
+	dbHost := "mysql"
 	dbPort := "3306"
 	dbName := "user_authentication"
 
-	// Create the Data Source Name (DSN) string
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", dbUser, dbPass, dbHost, dbPort, dbName)
 
-	// Initialize the database connection
-	err := store.InitDB(dsn)
+	var err error
+	for i := 0; i < 10; i++ {
+		err = store.InitDB(dsn)
+		if err == nil {
+			break
+		}
+		log.Println("DB not ready, retrying in 2 seconds...")
+		time.Sleep(2 * time.Second)
+	}
 	if err != nil {
-		log.Fatalf("DB error: %v", err)
+		log.Fatalf("DB error after retries: %v", err)
 	}
 
 	// Set up the routes with CORS handling
