@@ -5,8 +5,8 @@ services:
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: "1234"  # Set MySQL root password
-      MYSQL_DATABASE: user_authentication
+      MYSQL_ROOT_PASSWORD: "1234" 
+      MYSQL_DATABASE: user_authentication 
     ports:
       - "3307:3306"  
     volumes:
@@ -19,11 +19,11 @@ services:
     depends_on:
       - mysql
     environment:
-      DB_USER: root  
-      DB_PASSWORD: "1234"  # Set MySQL password for backend
-      DB_HOST: mysql  
-      DB_PORT: 3306  
-      DB_NAME: user_authentication
+      dbUser: root  
+      dbPass: "1234"
+      dbHost: mysql  
+      dbPort: 3306  
+      dbName: user_authentication 
 
   frontend:
     build: ./frontend/fe
